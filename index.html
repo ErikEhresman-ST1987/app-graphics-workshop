@@ -203,14 +203,14 @@
       }
       function render() {
         layer.replaceChildren(...state.parts.map(shapeElement));
-        emptyMessages.forEach(item => item.hidden = state.parts.length > 0);
+        emptyMessages.forEach(item => item.toggleAttribute("hidden", state.parts.length > 0));
         renderSelection(); renderEditor(); renderPartsList();
       }
       function renderSelection() {
         const part = selectedPart();
-        if (!part) { selectionBox.hidden = true; return; }
+        if (!part) { selectionBox.setAttribute("hidden", ""); return; }
         const pad = 9 + part.strokeWidth/2;
-        selectionBox.hidden = false;
+        selectionBox.removeAttribute("hidden");
         selectionBox.setAttribute("x",part.x-part.width/2-pad); selectionBox.setAttribute("y",part.y-part.height/2-pad);
         selectionBox.setAttribute("width",part.width+pad*2); selectionBox.setAttribute("height",part.height+pad*2);
         selectionBox.setAttribute("transform",`rotate(${part.rotation} ${part.x} ${part.y})`);
