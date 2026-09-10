@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#243c5a">
+  <meta name="description" content="A lightweight workshop for building reusable app graphics from editable shapes.">
+  <title>App Graphics Workshop</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink:#1d2b3a; --muted:#647180; --navy:#243c5a; --blue:#3976a8;
+      --sky:#dcecf5; --paper:#fffdf8; --cream:#f4efe3; --line:#c9c2b2;
+      --gold:#edb84b; --danger:#a53c38;
+      font-family: ui-rounded, "Avenir Next Rounded", "Avenir Next", system-ui, sans-serif;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; color:var(--ink); background:#cbdde8; }
+    button, input, select { font:inherit; }
+    button { cursor:pointer; }
+    .shell { width:min(100%, 1080px); min-height:100vh; margin:auto; background:var(--cream); box-shadow:0 0 48px #243c5a24; }
+    header { padding:max(18px, env(safe-area-inset-top)) 18px 16px; color:white; background:linear-gradient(135deg, #243c5a, #356c8d); }
+    .eyebrow { margin:0 0 3px; color:#c6e7f7; font-size:.76rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+    h1, h2, p { margin:0; }
+    h1 { font-size:clamp(1.55rem, 5vw, 2.25rem); }
+    header p:last-child { max-width:680px; margin-top:5px; color:#e8f4fa; line-height:1.4; }
+    main { padding:16px; display:grid; gap:14px; }
+    .card { padding:14px; border:2px solid var(--line); border-radius:17px; background:var(--paper); box-shadow:0 4px 0 #b8b09e; }
+    .card-heading { margin-bottom:11px; display:flex; align-items:start; justify-content:space-between; gap:10px; }
+    h2 { color:var(--navy); font-size:1.05rem; }
+    .help { margin-top:3px; color:var(--muted); font-size:.84rem; line-height:1.35; }
+    .shape-bar { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
+    .shape-button { min-height:49px; padding:7px; border:2px solid #aebdca; border-radius:12px; background:#edf5f8; color:var(--navy); font-weight:850; }
+    .shape-button:active { transform:translateY(1px); background:#dcecf5; }
+    .workspace { display:grid; grid-template-columns:minmax(0, 1.45fr) minmax(260px, .75fr); gap:14px; align-items:start; }
+    .canvas-card { min-width:0; }
+    .canvas-frame { position:relative; aspect-ratio:1; overflow:hidden; border:3px solid #6f8fa6; border-radius:15px; background:white; box-shadow:inset 0 0 0 1px #fff; }
+    #artboard { display:block; width:100%; height:100%; touch-action:none; user-select:none; background-color:#fff; background-image:linear-gradient(#d9e1e655 1px, transparent 1px),linear-gradient(90deg,#d9e1e655 1px,transparent 1px); background-size:30px 30px; }
+    .art-part { cursor:grab; }
+    .art-part:active { cursor:grabbing; }
+    .selection-box { pointer-events:none; fill:none; stroke:#e05b3f; stroke-width:3; stroke-dasharray:9 7; vector-effect:non-scaling-stroke; }
+    .empty-message { pointer-events:none; fill:#788795; font-size:22px; font-weight:700; text-anchor:middle; }
+    .status { min-height:22px; margin-top:8px; color:var(--muted); font-size:.8rem; font-weight:700; }
+    .side { display:grid; gap:14px; }
+    .part-title { display:grid; grid-template-columns:1fr; gap:5px; }
+    .part-title label, .field label { color:#526171; font-size:.76rem; font-weight:900; letter-spacing:.025em; }
+    input[type="text"], input[type="number"] { width:100%; min-height:43px; border:2px solid #bac5cc; border-radius:10px; padding:7px 9px; background:white; color:var(--ink); }
+    .fields { margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .field { display:grid; gap:4px; }
+    .field input[type="color"] { width:100%; height:43px; padding:3px; border:2px solid #bac5cc; border-radius:10px; background:white; }
+    .full { grid-column:1/-1; }
+    .disabled-note { padding:12px; border-radius:10px; color:var(--muted); background:#f1eee7; font-size:.86rem; line-height:1.4; }
+    .parts-list { display:grid; gap:7px; }
+    .part-row { width:100%; min-height:45px; display:flex; align-items:center; gap:9px; padding:7px 9px; border:2px solid #d3cbbb; border-radius:10px; background:#f5f1e8; color:var(--ink); text-align:left; }
+    .part-row.selected { border-color:var(--blue); background:#e1eff7; box-shadow:inset 4px 0 var(--blue); }
+    .swatch { width:25px; height:25px; flex:0 0 auto; border:2px solid #ffffff; border-radius:7px; box-shadow:0 0 0 1px #9ca6ab; }
+    .part-name { overflow:hidden; font-weight:850; text-overflow:ellipsis; white-space:nowrap; }
+    .part-order { margin-left:auto; color:var(--muted); font-size:.72rem; font-weight:800; }
+    .empty-list { padding:11px; border-radius:10px; background:#f1eee7; color:var(--muted); font-size:.85rem; }
+    @media (max-width:760px) {
+      main { padding:12px; }
+      .workspace { grid-template-columns:1fr; }
+      .side { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:520px) {
+      .shape-bar { grid-template-columns:1fr 1fr; }
+      .side { grid-template-columns:1fr; }
+      .card { padding:12px; }
+    }
+    @media (prefers-reduced-motion:reduce) { * { scroll-behavior:auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <p class="eyebrow">V0.1 Foundation</p>
+      <h1>App Graphics Workshop</h1>
+      <p>Build useful graphics from understandable pieces. Tap a shape, then drag it or adjust its controls.</p>
+    </header>
+    <main>
+      <section class="card" aria-labelledby="add-title">
+        <div class="card-heading"><div><h2 id="add-title">Add a shape</h2><p class="help">Each new shape becomes an independently editable part.</p></div></div>
+        <div class="shape-bar">
+          <button class="shape-button" data-add="rectangle" type="button">Rectangle</button>
+          <button class="shape-button" data-add="oval" type="button">Oval</button>
+          <button class="shape-button" data-add="circle" type="button">Circle</button>
+          <button class="shape-button" data-add="triangle" type="button">Triangle</button>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="card canvas-card" aria-labelledby="canvas-title">
+          <div class="card-heading"><div><h2 id="canvas-title">Design canvas</h2><p class="help">600 × 600 SVG workspace · drag any selected part to move it</p></div></div>
+          <div class="canvas-frame">
+            <svg id="artboard" viewBox="0 0 600 600" role="img" aria-label="Graphics design canvas">
+              <g id="parts-layer"></g>
+              <rect id="selection-box" class="selection-box" hidden></rect>
+              <text id="empty-message" class="empty-message" x="300" y="292">Add a shape to begin</text>
+              <text id="empty-submessage" class="empty-message" x="300" y="326" style="font-size:15px;font-weight:600">Your work saves automatically on this device.</text>
+            </svg>
+          </div>
+          <p class="status" id="status" aria-live="polite">Ready. No design has been started.</p>
+        </section>
+
+        <aside class="side">
+          <section class="card" aria-labelledby="edit-title">
+            <div class="card-heading"><div><h2 id="edit-title">Selected part</h2><p class="help">Simple controls for the highlighted shape.</p></div></div>
+            <div id="no-selection" class="disabled-note">Add or select a shape to edit it.</div>
+            <div id="editor" hidden>
+              <div class="part-title"><label for="part-name">Part name</label><input id="part-name" type="text" maxlength="40"></div>
+              <div class="fields">
+                <div class="field"><label for="part-x">Horizontal position</label><input id="part-x" data-property="x" type="number" min="-600" max="1200" step="1"></div>
+                <div class="field"><label for="part-y">Vertical position</label><input id="part-y" data-property="y" type="number" min="-600" max="1200" step="1"></div>
+                <div class="field"><label for="part-width">Width</label><input id="part-width" data-property="width" type="number" min="4" max="1200" step="1"></div>
+                <div class="field"><label for="part-height">Height</label><input id="part-height" data-property="height" type="number" min="4" max="1200" step="1"></div>
+                <div class="field"><label for="part-rotation">Rotation</label><input id="part-rotation" data-property="rotation" type="number" min="-360" max="360" step="1"></div>
+                <div class="field"><label for="part-roundness">Roundness</label><input id="part-roundness" data-property="roundness" type="number" min="0" max="50" step="1"></div>
+                <div class="field"><label for="part-fill">Fill color</label><input id="part-fill" data-property="fill" type="color"></div>
+                <div class="field"><label for="part-stroke">Outline color</label><input id="part-stroke" data-property="stroke" type="color"></div>
+                <div class="field full"><label for="part-stroke-width">Outline thickness</label><input id="part-stroke-width" data-property="strokeWidth" type="number" min="0" max="30" step="1"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card" aria-labelledby="parts-title">
+            <div class="card-heading"><div><h2 id="parts-title">Parts</h2><p class="help">Back parts appear first; front parts appear last.</p></div></div>
+            <div id="parts-list" class="parts-list"></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+      const STORAGE_KEY = "appGraphicsWorkshop.foundation.v1";
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      const palette = ["#5b8fb9", "#e09c52", "#75a66f", "#aa78a6", "#d4665a"];
+      const defaults = {
+        rectangle:{width:180,height:110,roundness:0}, oval:{width:180,height:110,roundness:50},
+        circle:{width:120,height:120,roundness:50}, triangle:{width:170,height:145,roundness:0}
+      };
+      const labels = {rectangle:"Rectangle",oval:"Oval",circle:"Circle",triangle:"Triangle"};
+      const layer = document.querySelector("#parts-layer");
+      const selectionBox = document.querySelector("#selection-box");
+      const emptyMessages = [document.querySelector("#empty-message"), document.querySelector("#empty-submessage")];
+      const editor = document.querySelector("#editor");
+      const noSelection = document.querySelector("#no-selection");
+      const nameInput = document.querySelector("#part-name");
+      const partsList = document.querySelector("#parts-list");
+      const status = document.querySelector("#status");
+      const artboard = document.querySelector("#artboard");
+      const propertyInputs = [...document.querySelectorAll("[data-property]")];
+      let state = loadState();
+      let drag = null;
+
+      function loadState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (saved && Array.isArray(saved.parts)) return {parts:saved.parts, selectedId:saved.selectedId || null};
+        } catch (_) {}
+        return {parts:[], selectedId:null};
+      }
+      function saveState(message) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (message) status.textContent = message;
+      }
+      function selectedPart() { return state.parts.find(part => part.id === state.selectedId) || null; }
+      function uniqueName(type) {
+        const base = labels[type], count = state.parts.filter(part => part.type === type).length + 1;
+        return `${base} ${count}`;
+      }
+      function addPart(type) {
+        const base = defaults[type];
+        const offset = (state.parts.length % 7) * 12;
+        const part = {id:`part-${Date.now()}-${Math.random().toString(16).slice(2)}`,type,name:uniqueName(type),x:300+offset,y:300+offset,width:base.width,height:base.height,rotation:0,roundness:base.roundness,fill:palette[state.parts.length%palette.length],stroke:"#26394a",strokeWidth:5};
+        state.parts.push(part); state.selectedId = part.id;
+        saveState(`${part.name} added and saved.`); render();
+      }
+      function shapeElement(part) {
+        let element;
+        if (part.type === "triangle") {
+          element = document.createElementNS(SVG_NS,"polygon");
+          element.setAttribute("points",`${part.x},${part.y-part.height/2} ${part.x+part.width/2},${part.y+part.height/2} ${part.x-part.width/2},${part.y+part.height/2}`);
+          element.setAttribute("stroke-linejoin","round");
+        } else if (part.type === "oval" || part.type === "circle") {
+          element = document.createElementNS(SVG_NS,"ellipse");
+          element.setAttribute("cx",part.x); element.setAttribute("cy",part.y);
+          element.setAttribute("rx",part.width/2); element.setAttribute("ry",part.height/2);
+        } else {
+          element = document.createElementNS(SVG_NS,"rect");
+          element.setAttribute("x",part.x-part.width/2); element.setAttribute("y",part.y-part.height/2);
+          element.setAttribute("width",part.width); element.setAttribute("height",part.height);
+          element.setAttribute("rx",Math.min(part.width,part.height)*part.roundness/100);
+        }
+        element.classList.add("art-part"); element.dataset.id = part.id;
+        element.setAttribute("fill",part.fill); element.setAttribute("stroke",part.stroke); element.setAttribute("stroke-width",part.strokeWidth);
+        element.setAttribute("transform",`rotate(${part.rotation} ${part.x} ${part.y})`);
+        element.addEventListener("pointerdown", startDrag);
+        return element;
+      }
+      function render() {
+        layer.replaceChildren(...state.parts.map(shapeElement));
+        emptyMessages.forEach(item => item.hidden = state.parts.length > 0);
+        renderSelection(); renderEditor(); renderPartsList();
+      }
+      function renderSelection() {
+        const part = selectedPart();
+        if (!part) { selectionBox.hidden = true; return; }
+        const pad = 9 + part.strokeWidth/2;
+        selectionBox.hidden = false;
+        selectionBox.setAttribute("x",part.x-part.width/2-pad); selectionBox.setAttribute("y",part.y-part.height/2-pad);
+        selectionBox.setAttribute("width",part.width+pad*2); selectionBox.setAttribute("height",part.height+pad*2);
+        selectionBox.setAttribute("transform",`rotate(${part.rotation} ${part.x} ${part.y})`);
+      }
+      function renderEditor() {
+        const part = selectedPart(), hasPart = Boolean(part);
+        editor.hidden = !hasPart; noSelection.hidden = hasPart;
+        if (!part) return;
+        nameInput.value = part.name;
+        propertyInputs.forEach(input => input.value = part[input.dataset.property]);
+        const roundnessField = document.querySelector("#part-roundness").closest(".field");
+        roundnessField.hidden = part.type !== "rectangle";
+      }
+      function renderPartsList() {
+        if (!state.parts.length) { partsList.innerHTML = '<p class="empty-list">No parts yet.</p>'; return; }
+        partsList.replaceChildren(...state.parts.map((part,index) => {
+          const button = document.createElement("button"); button.type="button"; button.className="part-row";
+          if (part.id === state.selectedId) button.classList.add("selected");
+          button.innerHTML = `<span class="swatch"></span><span class="part-name"></span><span class="part-order">${index+1}</span>`;
+          button.querySelector(".swatch").style.background = part.fill;
+          button.querySelector(".part-name").textContent = part.name;
+          button.addEventListener("click", () => { state.selectedId=part.id; saveState(`${part.name} selected.`); render(); });
+          return button;
+        }));
+      }
+      function svgPoint(event) {
+        const point = artboard.createSVGPoint(); point.x=event.clientX; point.y=event.clientY;
+        return point.matrixTransform(artboard.getScreenCTM().inverse());
+      }
+      function startDrag(event) {
+        event.preventDefault();
+        const id = event.currentTarget.dataset.id; state.selectedId=id;
+        const part=selectedPart(), point=svgPoint(event);
+        drag={id,pointerId:event.pointerId,dx:point.x-part.x,dy:point.y-part.y};
+        artboard.setPointerCapture(event.pointerId); renderSelection(); renderEditor(); renderPartsList();
+      }
+      artboard.addEventListener("pointermove", event => {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        const part=selectedPart(), point=svgPoint(event); if (!part || part.id!==drag.id) return;
+        part.x=Math.round(point.x-drag.dx); part.y=Math.round(point.y-drag.dy); render();
+      });
+      function finishDrag(event) {
+        if (!drag || event.pointerId !== drag.pointerId) return;
+        const part=selectedPart(); drag=null; saveState(`${part.name} moved and saved.`);
+      }
+      artboard.addEventListener("pointerup",finishDrag); artboard.addEventListener("pointercancel",finishDrag);
+      artboard.addEventListener("pointerdown", event => {
+        if (event.target === artboard) { state.selectedId=null; saveState("Selection cleared."); render(); }
+      });
+      document.querySelectorAll("[data-add]").forEach(button => button.addEventListener("click",()=>addPart(button.dataset.add)));
+      nameInput.addEventListener("input", event => { const part=selectedPart(); if(!part)return; part.name=event.target.value||labels[part.type]; saveState("Part name saved."); renderPartsList(); });
+      propertyInputs.forEach(input => input.addEventListener("input", event => {
+        const part=selectedPart(); if(!part)return; const property=input.dataset.property;
+        if (input.type === "number") {
+          const value=Number(input.value); if(!Number.isFinite(value)) return;
+          part[property] = ["width","height"].includes(property) ? Math.max(4,value) : property==="roundness" ? Math.max(0,Math.min(50,value)) : Math.max(Number(input.min),Math.min(Number(input.max),value));
+        } else part[property]=input.value;
+        saveState(`${part.name} updated and saved.`); render();
+      }));
+      render();
+      status.textContent = state.parts.length ? `Restored ${state.parts.length} saved ${state.parts.length===1?"part":"parts"}.` : "Ready. No design has been started.";
+    })();
+  </script>
+</body>
+</html>
