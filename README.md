@@ -11,6 +11,9 @@ V0.1 foundation test:
 - tap selection and direct pointer/touch dragging
 - position, size, rotation, roundness, fill, and outline controls
 - ordered parts list
+- duplicate, delete, move forward, and move backward controls
 - automatic local browser saving
+- editable `.graphics-workshop.json` project download and reopen
+- clean, app-ready SVG export
 
-Starting forms, part-management actions, editable project downloads, and SVG export are deliberately deferred until the foundation has been tested on the target iPad and iPhone.
+Starting forms and additional primitive shapes remain deliberately deferred until the part-management and file workflow has been tested on the target iPad and iPhone.
