@@ -40,6 +40,7 @@
     .art-part:active { cursor:grabbing; }
     .selection-box { pointer-events:none; fill:none; stroke:#e05b3f; stroke-width:3; stroke-dasharray:9 7; vector-effect:non-scaling-stroke; }
     .empty-message { pointer-events:none; fill:#788795; font-size:22px; font-weight:700; text-anchor:middle; }
+    .selection-box[hidden], .empty-message[hidden] { display:none; }
     .status { min-height:22px; margin-top:8px; color:var(--muted); font-size:.8rem; font-weight:700; }
     .side { display:grid; gap:14px; }
     .part-title { display:grid; grid-template-columns:1fr; gap:5px; }
