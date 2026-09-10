@@ -32,6 +32,13 @@
     .shape-bar { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; }
     .shape-button { min-height:49px; padding:7px; border:2px solid #aebdca; border-radius:12px; background:#edf5f8; color:var(--navy); font-weight:850; }
     .shape-button:active { transform:translateY(1px); background:#dcecf5; }
+    .file-bar { display:grid; grid-template-columns:minmax(170px, 1.25fr) repeat(3, minmax(135px, .75fr)); gap:8px; align-items:end; }
+    .file-name { display:grid; gap:5px; }
+    .file-name label { color:#526171; font-size:.76rem; font-weight:900; letter-spacing:.025em; }
+    .action-button { min-height:45px; padding:7px 10px; border:0; border-radius:11px; background:var(--navy); color:white; font-weight:850; }
+    .action-button.secondary { border:2px solid #9dafba; background:#edf5f8; color:var(--navy); }
+    .action-button.danger { background:var(--danger); }
+    .action-button:disabled { cursor:not-allowed; opacity:.42; }
     .workspace { display:grid; grid-template-columns:minmax(0, 1.45fr) minmax(260px, .75fr); gap:14px; align-items:start; }
     .canvas-card { min-width:0; }
     .canvas-frame { position:relative; aspect-ratio:1; overflow:hidden; border:3px solid #6f8fa6; border-radius:15px; background:white; box-shadow:inset 0 0 0 1px #fff; }
@@ -51,6 +58,7 @@
     .field input[type="color"] { width:100%; height:43px; padding:3px; border:2px solid #bac5cc; border-radius:10px; background:white; }
     .full { grid-column:1/-1; }
     .disabled-note { padding:12px; border-radius:10px; color:var(--muted); background:#f1eee7; font-size:.86rem; line-height:1.4; }
+    .part-actions { margin-top:11px; display:grid; grid-template-columns:1fr 1fr; gap:7px; }
     .parts-list { display:grid; gap:7px; }
     .part-row { width:100%; min-height:45px; display:flex; align-items:center; gap:9px; padding:7px 9px; border:2px solid #d3cbbb; border-radius:10px; background:#f5f1e8; color:var(--ink); text-align:left; }
     .part-row.selected { border-color:var(--blue); background:#e1eff7; box-shadow:inset 4px 0 var(--blue); }
@@ -62,9 +70,13 @@
       main { padding:12px; }
       .workspace { grid-template-columns:1fr; }
       .side { grid-template-columns:1fr 1fr; }
+      .file-bar { grid-template-columns:1fr 1fr; }
+      .file-name { grid-column:1/-1; }
     }
     @media (max-width:520px) {
       .shape-bar { grid-template-columns:1fr 1fr; }
+      .file-bar { grid-template-columns:1fr; }
+      .file-name { grid-column:auto; }
       .side { grid-template-columns:1fr; }
       .card { padding:12px; }
     }
@@ -79,6 +91,17 @@
       <p>Build useful graphics from understandable pieces. Tap a shape, then drag it or adjust its controls.</p>
     </header>
     <main>
+      <section class="card" aria-labelledby="files-title">
+        <div class="card-heading"><div><h2 id="files-title">Design files</h2><p class="help">Keep an editable copy or export a lightweight graphic for another app.</p></div></div>
+        <div class="file-bar">
+          <div class="file-name"><label for="design-name">Design name</label><input id="design-name" type="text" maxlength="60" value="Untitled Design"></div>
+          <button class="action-button secondary" id="save-project" type="button">Save Editable Design</button>
+          <button class="action-button secondary" id="open-project" type="button">Open Editable Design</button>
+          <button class="action-button" id="export-svg" type="button">Export Graphic for App</button>
+          <input id="project-file" type="file" accept="application/json,.json" hidden>
+        </div>
+      </section>
+
       <section class="card" aria-labelledby="add-title">
         <div class="card-heading"><div><h2 id="add-title">Add a shape</h2><p class="help">Each new shape becomes an independently editable part.</p></div></div>
         <div class="shape-bar">
@@ -120,6 +143,12 @@
                 <div class="field"><label for="part-stroke">Outline color</label><input id="part-stroke" data-property="stroke" type="color"></div>
                 <div class="field full"><label for="part-stroke-width">Outline thickness</label><input id="part-stroke-width" data-property="strokeWidth" type="number" min="0" max="30" step="1"></div>
               </div>
+              <div class="part-actions">
+                <button class="action-button secondary" id="duplicate-part" type="button">Duplicate</button>
+                <button class="action-button danger" id="delete-part" type="button">Delete</button>
+                <button class="action-button secondary" id="move-back" type="button">Move Backward</button>
+                <button class="action-button secondary" id="move-front" type="button">Move Forward</button>
+              </div>
             </div>
           </section>
 
@@ -149,6 +178,7 @@
       const editor = document.querySelector("#editor");
       const noSelection = document.querySelector("#no-selection");
       const nameInput = document.querySelector("#part-name");
+      const designNameInput = document.querySelector("#design-name");
       const partsList = document.querySelector("#parts-list");
       const status = document.querySelector("#status");
       const artboard = document.querySelector("#artboard");
@@ -159,15 +189,23 @@
       function loadState() {
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-          if (saved && Array.isArray(saved.parts)) return {parts:saved.parts, selectedId:saved.selectedId || null};
+          if (saved && Array.isArray(saved.parts)) return {parts:saved.parts, selectedId:saved.selectedId || null, designName:saved.designName || "Untitled Design"};
         } catch (_) {}
-        return {parts:[], selectedId:null};
+        return {parts:[], selectedId:null, designName:"Untitled Design"};
       }
       function saveState(message) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         if (message) status.textContent = message;
       }
       function selectedPart() { return state.parts.find(part => part.id === state.selectedId) || null; }
+      function safeFilename(name) {
+        return (name || "untitled-design").trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "untitled-design";
+      }
+      function downloadFile(filename, content, type) {
+        const url=URL.createObjectURL(new Blob([content],{type}));
+        const link=document.createElement("a"); link.href=url; link.download=filename;
+        document.body.append(link); link.click(); link.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+      }
       function uniqueName(type) {
         const base = labels[type], count = state.parts.filter(part => part.type === type).length + 1;
         return `${base} ${count}`;
@@ -223,6 +261,9 @@
         propertyInputs.forEach(input => input.value = part[input.dataset.property]);
         const roundnessField = document.querySelector("#part-roundness").closest(".field");
         roundnessField.hidden = part.type !== "rectangle";
+        const index=state.parts.findIndex(item=>item.id===part.id);
+        document.querySelector("#move-back").disabled=index<=0;
+        document.querySelector("#move-front").disabled=index>=state.parts.length-1;
       }
       function renderPartsList() {
         if (!state.parts.length) { partsList.innerHTML = '<p class="empty-list">No parts yet.</p>'; return; }
@@ -261,6 +302,8 @@
         if (event.target === artboard) { state.selectedId=null; saveState("Selection cleared."); render(); }
       });
       document.querySelectorAll("[data-add]").forEach(button => button.addEventListener("click",()=>addPart(button.dataset.add)));
+      designNameInput.value=state.designName;
+      designNameInput.addEventListener("input",event=>{ state.designName=event.target.value||"Untitled Design"; saveState("Design name saved."); });
       nameInput.addEventListener("input", event => { const part=selectedPart(); if(!part)return; part.name=event.target.value||labels[part.type]; saveState("Part name saved."); renderPartsList(); });
       propertyInputs.forEach(input => input.addEventListener("input", event => {
         const part=selectedPart(); if(!part)return; const property=input.dataset.property;
@@ -270,6 +313,52 @@
         } else part[property]=input.value;
         saveState(`${part.name} updated and saved.`); render();
       }));
+      document.querySelector("#duplicate-part").addEventListener("click",()=>{
+        const part=selectedPart(); if(!part)return;
+        const copy={...part,id:`part-${Date.now()}-${Math.random().toString(16).slice(2)}`,name:`${part.name} Copy`,x:part.x+20,y:part.y+20};
+        state.parts.push(copy); state.selectedId=copy.id; saveState(`${copy.name} duplicated and saved.`); render();
+      });
+      document.querySelector("#delete-part").addEventListener("click",()=>{
+        const part=selectedPart(); if(!part||!confirm(`Delete ${part.name}?`))return;
+        state.parts=state.parts.filter(item=>item.id!==part.id); state.selectedId=null;
+        saveState(`${part.name} deleted.`); render();
+      });
+      function moveSelected(direction) {
+        const index=state.parts.findIndex(item=>item.id===state.selectedId), next=index+direction;
+        if(index<0||next<0||next>=state.parts.length)return;
+        [state.parts[index],state.parts[next]]=[state.parts[next],state.parts[index]];
+        saveState(`${selectedPart().name} moved ${direction>0?"forward":"backward"}.`); render();
+      }
+      document.querySelector("#move-back").addEventListener("click",()=>moveSelected(-1));
+      document.querySelector("#move-front").addEventListener("click",()=>moveSelected(1));
+      document.querySelector("#save-project").addEventListener("click",()=>{
+        const project={format:"app-graphics-workshop",version:1,canvas:{width:600,height:600},designName:state.designName,parts:state.parts};
+        downloadFile(`${safeFilename(state.designName)}.graphics-workshop.json`,JSON.stringify(project,null,2),"application/json");
+        status.textContent="Editable design downloaded.";
+      });
+      const projectFile=document.querySelector("#project-file");
+      document.querySelector("#open-project").addEventListener("click",()=>projectFile.click());
+      projectFile.addEventListener("change",async()=>{
+        const file=projectFile.files[0]; if(!file)return;
+        try {
+          const project=JSON.parse(await file.text());
+          const allowed=new Set(Object.keys(defaults));
+          if(project.format!=="app-graphics-workshop"||project.version!==1||!Array.isArray(project.parts)||!project.parts.every(part=>part&&allowed.has(part.type)&&typeof part.id==="string")) throw new Error("unsupported");
+          if(state.parts.length&&!confirm("Replace the current design with this saved design?")) { projectFile.value=""; return; }
+          state={parts:project.parts,selectedId:null,designName:project.designName||"Untitled Design"};
+          designNameInput.value=state.designName; saveState(`Opened ${file.name}.`); render();
+        } catch (_) { status.textContent="That file is not a valid App Graphics Workshop design."; }
+        projectFile.value="";
+      });
+      document.querySelector("#export-svg").addEventListener("click",()=>{
+        if(!state.parts.length) { status.textContent="Add at least one shape before exporting."; return; }
+        const output=document.createElementNS(SVG_NS,"svg");
+        output.setAttribute("xmlns",SVG_NS); output.setAttribute("viewBox","0 0 600 600"); output.setAttribute("role","img"); output.setAttribute("aria-label",state.designName);
+        const title=document.createElementNS(SVG_NS,"title"); title.textContent=state.designName; output.append(title);
+        state.parts.forEach(part=>{ const element=shapeElement(part); element.removeAttribute("class"); element.removeAttribute("data-id"); output.append(element); });
+        downloadFile(`${safeFilename(state.designName)}.svg`,new XMLSerializer().serializeToString(output),"image/svg+xml");
+        status.textContent="App-ready SVG downloaded.";
+      });
       render();
       status.textContent = state.parts.length ? `Restored ${state.parts.length} saved ${state.parts.length===1?"part":"parts"}.` : "Ready. No design has been started.";
     })();
