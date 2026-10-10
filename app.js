@@ -22,3 +22,5 @@ function removeEnclosedWhite(data,width,height,tolerance){
   if(tail>=4)for(let i=0;i<tail;i++)data[queue[i]*4+3]=0;
  }
 }
+
+if('serviceWorker'in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('./service-worker.js').catch(error=>console.warn('Offline support unavailable:',error))})}
