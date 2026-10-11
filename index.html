@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17202b">
 <title>Sprite Factory</title>
-<link rel="stylesheet" href="style.css?v=20261010h">
+<link rel="stylesheet" href="style.css?v=20261010i">
 </head>
 <body>
 <main>
-<header><h1>Sprite Factory</h1><p class="muted">Turn illustrations into transparent WebP game sprites.</p></header>
-<section class="panel" aria-labelledby="source-title">
+<header><h1>Sprite Factory</h1><p class="muted">Prepare transparent sprites and full-screen game scenery.</p></header>
+<section class="panel"><h2>Graphic type</h2><div class="mode-switch"><label><input type="radio" name="mode" value="sprite" checked> Sprite</label><label><input type="radio" name="mode" value="background"> Background</label></div><p id="modeHelp" class="muted small">Transparent artwork for characters, objects, and items.</p></section><section class="panel" aria-labelledby="source-title">
 <h2 id="source-title"><span class="step">1</span> Choose artwork</h2>
 <label class="file-label" for="file">Image file <span class="hint">PNG, JPG, or WebP</span></label>
 <input id="file" type="file" accept="image/png,image/jpeg,image/webp">
 </section>
 <section class="panel" aria-labelledby="settings-title">
-<h2 id="settings-title"><span class="step">2</span> Prepare sprite</h2>
+<h2 id="settings-title"><span class="step">2</span> <span id="settingsHeading">Prepare sprite</span></h2><div id="spriteSettings">
 <div class="setting"><label for="tolerance">White background removal <span class="hint">Tolerance: <output id="tol">35</output></span></label><input id="tolerance" type="range" min="0" max="90" value="35"></div>
 <div class="check-group">
 <label><input type="checkbox" id="enclosedWhite"> Remove white areas inside artwork <span class="hint">May also remove white details</span></label>
@@ -26,17 +26,17 @@
 <div class="setting"><label for="coverage">Subject size <span class="hint"><output id="coverageValue">90%</output> when auto sizing is on</span></label><input id="coverage" type="range" min="50" max="100" value="90" step="5"></div>
 <div class="setting"><label for="preset">Output size</label><select id="preset"><option value="custom">Custom dimensions</option><option value="64">64 × 64</option><option value="128">128 × 128</option><option value="256">256 × 256</option><option value="512" selected>512 × 512</option><option value="1024">1024 × 1024</option></select></div>
 <div class="dimensions"><label for="width">Width <input id="width" type="number" min="1" max="4096" value="512"></label><label for="height">Height <input id="height" type="number" min="1" max="4096" value="512"></label></div>
-<label class="fit-label"><input type="checkbox" id="fit" checked> Keep original proportions</label>
+<label class="fit-label"><input type="checkbox" id="fit" checked> Keep original proportions</label></div><div id="backgroundSettings" hidden><p class="muted">Fill the entire image without stretching. Excess scenery is cropped evenly from the edges. White skies and clouds remain intact.</p><div class="setting"><label for="bgPreset">Screen size</label><select id="bgPreset"><option value="1280x720" selected>1280 × 720 (16:9)</option><option value="1920x1080">1920 × 1080 (16:9)</option><option value="1024x768">1024 × 768 (4:3)</option><option value="custom">Custom dimensions</option></select></div><div class="dimensions"><label for="bgWidth">Width <input id="bgWidth" type="number" min="1" max="4096" value="1280"></label><label for="bgHeight">Height <input id="bgHeight" type="number" min="1" max="4096" value="720"></label></div></div>
 </section>
 <section class="panel" aria-labelledby="result-title">
-<h2 id="result-title"><span class="step">3</span> Export sprite</h2>
-<div class="actions"><button id="process" disabled>Create WebP sprite</button><a id="download" hidden>Download WebP</a></div>
+<h2 id="result-title"><span class="step">3</span> Export graphic</h2>
+<div class="actions"><button id="process" disabled>Create WebP</button><a id="download" hidden>Download WebP</a></div>
 <p id="status" role="status">Choose an image to begin.</p>
 <div class="preview" aria-label="Sprite preview on a transparency checkerboard"><canvas id="preview"></canvas></div>
-<p class="muted small">The checkerboard shows transparent areas. WebP output is verified before download. An internet connection is required on browsers that need the WebP encoder.</p>
+<p class="muted small">Checkerboard areas are transparent in Sprite mode. Background mode fills the canvas. WebP output is verified before download. An internet connection is required on browsers that need the WebP encoder.</p>
 </section>
-<footer class="muted small">Sprite Factory · Online version · Interface update 08</footer>
+<footer class="muted small">Sprite Factory · Online version · Background mode · Increment 09</footer>
 </main>
-<script src="app.js?v=20261010h"></script>
+<script src="app.js?v=20261010i"></script>
 </body>
 </html>
