@@ -24,3 +24,38 @@ function removeEnclosedWhite(data,width,height,tolerance){
 }
 
 if('serviceWorker'in navigator){navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.filter(r=>r.scope.startsWith(location.origin+location.pathname.replace(/[^/]*$/,''))).map(r=>r.unregister()))).catch(()=>{})}
+
+async function createBackground(){
+ const ow=Number($('bgWidth').value),oh=Number($('bgHeight').value);
+ if(!Number.isInteger(ow)||!Number.isInteger(oh)||ow<1||oh<1||ow>4096||oh>4096)throw Error('Background dimensions must be 1–4096 pixels.');
+ const bmp=await createImageBitmap(source);
+ try{
+  const canvas=$('preview');canvas.width=ow;canvas.height=oh;
+  const c=canvas.getContext('2d',{willReadFrequently:true});c.fillStyle='#ffffff';c.fillRect(0,0,ow,oh);
+  const scale=Math.max(ow/bmp.width,oh/bmp.height),sw=ow/scale,sh=oh/scale;
+  c.drawImage(bmp,(bmp.width-sw)/2,(bmp.height-sh)/2,sw,sh,0,0,ow,oh);
+  $('status').textContent='Encoding background WebP…';
+  let blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.95));let encoder='browser';
+  if(!blob||blob.type!=='image/webp'){
+   encoder='WebAssembly';$('status').textContent='Loading WebP encoder…';
+   const codec=await import('https://esm.sh/@jsquash/webp@1.5.0');
+   blob=new Blob([await codec.encode(c.getImageData(0,0,ow,oh))],{type:'image/webp'});
+  }
+  const bytes=new Uint8Array(await blob.slice(0,12).arrayBuffer());
+  const tag=(a,b)=>String.fromCharCode(...bytes.slice(a,b));
+  if(tag(0,4)!=='RIFF'||tag(8,12)!=='WEBP')throw Error('Output is not a genuine WebP.');
+  const test=await createImageBitmap(blob);
+  try{
+   if(test.width!==ow||test.height!==oh)throw Error('Encoded dimensions do not match.');
+   const check=document.createElement('canvas');check.width=ow;check.height=oh;
+   const ctx=check.getContext('2d',{willReadFrequently:true});ctx.drawImage(test,0,0);
+   const pixels=ctx.getImageData(0,0,ow,oh).data;
+   for(let i=3;i<pixels.length;i+=4)if(pixels[i]!==255)throw Error('Background export contains transparent pixels.');
+  }finally{test.close()}
+  if(downloadUrl)URL.revokeObjectURL(downloadUrl);
+  downloadUrl=URL.createObjectURL(blob);$('download').href=downloadUrl;
+  $('download').download=source.name.replace(/\.[^.]+$/,'')+'-background.webp';
+  $('download').hidden=false;
+  $('status').textContent='Background verified ('+encoder+'): opaque WebP, '+ow+' × '+oh+'; '+Math.round(blob.size/1024)+' KB.';
+ }finally{bmp.close()}
+}
