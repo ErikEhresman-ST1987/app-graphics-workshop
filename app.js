@@ -71,11 +71,13 @@ async function createSheet(){
   const sc=src.getContext('2d',{willReadFrequently:true});sc.drawImage(bmp,0,0);
   const out=$('preview');out.width=n*size;out.height=size;const oc=out.getContext('2d');oc.clearRect(0,0,out.width,out.height);
   const subjects=[];const tolerance=35;const edgeWarnings=[];
+  const components=$('sheetExtraction').value==='components';
   const smart=$('sheetExtraction').value==='smart';
   const cutResult=smart?findSmartCuts(sc,bmp.width,bmp.height,n):null;
   if(smart&&cutResult.unsafe.length)throw Error('Smart extraction cannot find a safe white gap at boundary '+cutResult.unsafe.join(', ')+'. No export created. Try a better-separated source or use Equal-width to compare.');
   const cuts=smart?cutResult.cuts:Array.from({length:n+1},(_,i)=>Math.round(i*bmp.width/n));
-  for(let i=0;i<n;i++){
+  if(components)subjects.push(...extractConnectedSubjects(sc,bmp.width,bmp.height,n));
+  for(let i=0;i<(components?0:n);i++){
    const x0=cuts[i],x1=cuts[i+1],w=x1-x0,h=bmp.height;
    const frame=sc.getImageData(x0,0,w,h),d=frame.data,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);
    let head=0,tail=0;
@@ -106,10 +108,11 @@ async function createSheet(){
    return weight?sum/weight:(s.left+s.right)/2;
   }
   const anchors=stationary?subjects.map(bodyAnchor):[];
+  const useScale=components&&stationary?Math.min(scale,size*.44/Math.max(...subjects.map((s,i)=>anchors[i]-s.left)),size*.44/Math.max(...subjects.map((s,i)=>s.right-anchors[i]+1))):scale;
   for(let i=0;i<n;i++){
-   const s=subjects[i],width=(s.right-s.left+1)*scale,height=(s.bottom-s.top+1)*scale;
+   const s=subjects[i],width=(s.right-s.left+1)*useScale,height=(s.bottom-s.top+1)*useScale;
    const center=(s.left+s.right)/2,sourceCenter=s.w/2;
-   const dx=stationary?i*size+size/2-(anchors[i]-s.left)*scale:i*size+size/2+(center-sourceCenter)*scale-width/2;
+   const dx=stationary?i*size+size/2-(anchors[i]-s.left)*useScale:components?i*size+(size-width)/2:i*size+size/2+(center-sourceCenter)*useScale-width/2;
    const dy=size*.94-height;
    if(dx<i*size||dx+width>(i+1)*size||dy<0)throw Error('Frame '+(i+1)+' does not fit the output cell. Try a larger cell or artwork with more even framing.');
    oc.drawImage(s.canvas,s.left,s.top,s.right-s.left+1,s.bottom-s.top+1,dx,dy,width,height);
@@ -277,3 +280,45 @@ $('detectCharacters').addEventListener('click',async()=>{
  }catch(e){$('componentText').textContent='Detection failed: '+e.message;}
  finally{if(bmp)bmp.close();button.disabled=!source;}
 });
+
+function extractConnectedSubjects(ctx,w,h,n){
+ const total=w*h;if(total>10000000)throw Error('Image too large for character extraction.');
+ const data=ctx.getImageData(0,0,w,h).data,mask=new Uint8Array(total),seen=new Uint8Array(total),stack=new Int32Array(total);
+ for(let p=0;p<total;p++){const k=p*4;if(data[k+3]>64&&Math.min(data[k],data[k+1],data[k+2])<225)mask[p]=1;}
+ const regions=[];
+ for(let p=0;p<total;p++){
+  if(!mask[p]||seen[p])continue;
+  let top=0,count=0,minX=w,minY=h,maxX=0,maxY=0;stack[top++]=p;seen[p]=1;const pixels=[];
+  while(top){const q=stack[--top],x=q%w,y=(q/w)|0;pixels.push(q);count++;
+   minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+   for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++){
+    const z=yy*w+xx;if(mask[z]&&!seen[z]){seen[z]=1;stack[top++]=z;}
+   }
+  }
+  if(count>=Math.max(100,Math.floor(total*.0003)))regions.push({pixels,minX,minY,maxX,maxY});
+ }
+ regions.sort((a,b)=>a.minX-b.minX);
+ if(regions.length!==n)throw Error('Detected '+regions.length+' connected characters for '+n+' frames. No export created; inspect detection outlines.');
+ const owner=new Int16Array(total);owner.fill(-1);
+ regions.forEach((r,i)=>r.pixels.forEach(p=>owner[p]=i));
+ return regions.map((r,i)=>{
+  const x0=Math.max(0,r.minX-2),y0=Math.max(0,r.minY-2),x1=Math.min(w-1,r.maxX+2),y1=Math.min(h-1,r.maxY+2),sw=x1-x0+1,sh=y1-y0+1;
+  const fc=document.createElement('canvas');fc.width=sw;fc.height=sh;
+  const context=fc.getContext('2d'),frame=context.createImageData(sw,sh),fd=frame.data,near=new Uint8Array(sw*sh);
+  for(const p of r.pixels){const x=p%w,y=(p/w)|0;
+   for(let yy=Math.max(y0,y-2);yy<=Math.min(y1,y+2);yy++)for(let xx=Math.max(x0,x-2);xx<=Math.min(x1,x+2);xx++){
+    const global=yy*w+xx;if(owner[global]!==-1&&owner[global]!==i)continue;
+    near[(yy-y0)*sw+xx-x0]=1;
+   }
+  }
+  for(let y=0;y<sh;y++)for(let x=0;x<sw;x++){
+   const p=y*sw+x;if(!near[p])continue;
+   const k=((y+y0)*w+x+x0)*4,t=p*4,dark=255-Math.min(data[k],data[k+1],data[k+2]);
+   const alpha=Math.min(data[k+3],Math.round(dark*255/35));
+   if(alpha<4)continue;
+   fd[t]=data[k];fd[t+1]=data[k+1];fd[t+2]=data[k+2];fd[t+3]=alpha;
+  }
+  context.putImageData(frame,0,0);
+  return {canvas:fc,left:0,right:sw-1,top:0,bottom:sh-1,w:sw,h:sh};
+ });
+}
