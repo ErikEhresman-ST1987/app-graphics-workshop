@@ -108,12 +108,17 @@ async function createSheet(){
    return weight?sum/weight:(s.left+s.right)/2;
   }
   const anchors=stationary?subjects.map(bodyAnchor):[];
-  const useScale=components&&stationary?Math.min(scale,size*.44/Math.max(...subjects.map((s,i)=>anchors[i]-s.left)),size*.44/Math.max(...subjects.map((s,i)=>s.right-anchors[i]+1))):scale;
+  const globalTop=components&&stationary?Math.min(...subjects.map(s=>s.originY)):0;
+  const globalBottom=components&&stationary?Math.max(...subjects.map(s=>s.originY+s.h)):0;
+  const sharedVerticalScale=components&&stationary?size*.88/Math.max(1,globalBottom-globalTop):scale;
+  const useScale=components&&stationary?Math.min(scale,sharedVerticalScale,size*.44/Math.max(...subjects.map((s,i)=>anchors[i]-s.left)),size*.44/Math.max(...subjects.map((s,i)=>s.right-anchors[i]+1))):scale;
   for(let i=0;i<n;i++){
    const s=subjects[i],width=(s.right-s.left+1)*useScale,height=(s.bottom-s.top+1)*useScale;
    const center=(s.left+s.right)/2,sourceCenter=s.w/2;
    const dx=stationary?i*size+size/2-(anchors[i]-s.left)*useScale:components?i*size+(size-width)/2:i*size+size/2+(center-sourceCenter)*useScale-width/2;
-   const dy=size*.94-height;
+   // Connected stationary frames share the ORIGINAL source-image Y coordinates.
+   // A grazing muzzle can pass below the hooves without moving the whole cow.
+   const dy=components&&stationary?size*.06+(s.originY-globalTop)*useScale:size*.94-height;
    if(dx<i*size||dx+width>(i+1)*size||dy<0)throw Error('Frame '+(i+1)+' does not fit the output cell. Try a larger cell or artwork with more even framing.');
    oc.drawImage(s.canvas,s.left,s.top,s.right-s.left+1,s.bottom-s.top+1,dx,dy,width,height);
   }
@@ -319,6 +324,6 @@ function extractConnectedSubjects(ctx,w,h,n){
    fd[t]=data[k];fd[t+1]=data[k+1];fd[t+2]=data[k+2];fd[t+3]=alpha;
   }
   context.putImageData(frame,0,0);
-  return {canvas:fc,left:0,right:sw-1,top:0,bottom:sh-1,w:sw,h:sh};
+  return {canvas:fc,left:0,right:sw-1,top:0,bottom:sh-1,w:sw,h:sh,originY:y0};
  });
 }
