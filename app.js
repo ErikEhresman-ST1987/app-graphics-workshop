@@ -111,11 +111,19 @@ async function createSheet(){
   const globalTop=components&&stationary?Math.min(...subjects.map(s=>s.originY)):0;
   const globalBottom=components&&stationary?Math.max(...subjects.map(s=>s.originY+s.h)):0;
   const sharedVerticalScale=components&&stationary?size*.88/Math.max(1,globalBottom-globalTop):scale;
-  const useScale=components&&stationary?Math.min(scale,sharedVerticalScale,size*.44/Math.max(...subjects.map((s,i)=>anchors[i]-s.left)),size*.44/Math.max(...subjects.map((s,i)=>s.right-anchors[i]+1))):scale;
+  // For component-based stationary animations, keep the source-image X offsets.
+  // One shared translation preserves relative torso positions; never recenter by pose.
+  const sourceCellWidth=bmp.width/n;
+  const sourceOffsets=components&&stationary?subjects.map((s,i)=>s.originX-i*sourceCellWidth):[];
+  const relativeLeft=components&&stationary?Math.min(...sourceOffsets):0;
+  const relativeRight=components&&stationary?Math.max(...subjects.map((s,i)=>sourceOffsets[i]+s.w)):0;
+  const sourceSpan=relativeRight-relativeLeft;
+  const useScale=components&&stationary?Math.min(scale,sharedVerticalScale,size*.88/Math.max(1,sourceSpan)):scale;
+  const sharedXOffset=components&&stationary?(size-sourceSpan*useScale)/2-relativeLeft*useScale:0;
   for(let i=0;i<n;i++){
    const s=subjects[i],width=(s.right-s.left+1)*useScale,height=(s.bottom-s.top+1)*useScale;
    const center=(s.left+s.right)/2,sourceCenter=s.w/2;
-   const dx=stationary?i*size+size/2-(anchors[i]-s.left)*useScale:components?i*size+(size-width)/2:i*size+size/2+(center-sourceCenter)*useScale-width/2;
+   const dx=components&&stationary?i*size+sharedXOffset+sourceOffsets[i]*useScale:stationary?i*size+size/2-(anchors[i]-s.left)*useScale:components?i*size+(size-width)/2:i*size+size/2+(center-sourceCenter)*useScale-width/2;
    // Connected stationary frames share the ORIGINAL source-image Y coordinates.
    // A grazing muzzle can pass below the hooves without moving the whole cow.
    const dy=components&&stationary?size*.06+(s.originY-globalTop)*useScale:size*.94-height;
@@ -324,6 +332,6 @@ function extractConnectedSubjects(ctx,w,h,n){
    fd[t]=data[k];fd[t+1]=data[k+1];fd[t+2]=data[k+2];fd[t+3]=alpha;
   }
   context.putImageData(frame,0,0);
-  return {canvas:fc,left:0,right:sw-1,top:0,bottom:sh-1,w:sw,h:sh,originY:y0};
+  return {canvas:fc,left:0,right:sw-1,top:0,bottom:sh-1,w:sw,h:sh,originX:x0,originY:y0};
  });
 }
