@@ -69,7 +69,7 @@ async function createSheet(){
   const src=document.createElement('canvas');src.width=bmp.width;src.height=bmp.height;
   const sc=src.getContext('2d',{willReadFrequently:true});sc.drawImage(bmp,0,0);
   const out=$('preview');out.width=n*size;out.height=size;const oc=out.getContext('2d');oc.clearRect(0,0,out.width,out.height);
-  const subjects=[];const tolerance=35;
+  const subjects=[];const tolerance=35;const edgeWarnings=[];
   for(let i=0;i<n;i++){
    const x0=Math.round(i*bmp.width/n),x1=Math.round((i+1)*bmp.width/n),w=x1-x0,h=bmp.height;
    const frame=sc.getImageData(x0,0,w,h),d=frame.data,seen=new Uint8Array(w*h),queue=new Int32Array(w*h);
@@ -81,7 +81,7 @@ async function createSheet(){
    let left=w,right=-1,top=h,bottom=-1;
    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const k=(y*w+x)*4;if(d[k+3]<16)continue;left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);}
    if(right<left)throw Error('No visible artwork detected in frame '+(i+1)+'.');
-   if(left<=1||right>=w-2)throw Error('Artwork touches a frame boundary in frame '+(i+1)+'. Increase spacing in the source sheet.');
+   if(left===0||right===w-1)edgeWarnings.push(i+1);
    const fc=document.createElement('canvas');fc.width=w;fc.height=h;fc.getContext('2d').putImageData(frame,0,0);
    subjects.push({canvas:fc,left,right,top,bottom,w,h});
   }
@@ -110,6 +110,6 @@ async function createSheet(){
   }finally{verify.close();}
   if(downloadUrl)URL.revokeObjectURL(downloadUrl);downloadUrl=URL.createObjectURL(blob);
   $('download').href=downloadUrl;$('download').download=source.name.replace(/\.[^.]+$/,'')+'-sheet.webp';$('download').hidden=false;
-  $('status').textContent='Verified ('+encoder+'): '+n+' frames, '+size+' × '+size+' each; sheet '+out.width+' × '+out.height+' WebP ('+Math.round(blob.size/1024)+' KB). Inspect alignment and edges before using in PixiJS.';
+  $('status').textContent='Verified ('+encoder+'): '+n+' frames, '+size+' × '+size+' each; sheet '+out.width+' × '+out.height+' WebP ('+Math.round(blob.size/1024)+' KB). Inspect alignment and edges before using in PixiJS.'+(edgeWarnings.length?' Warning: artwork reaches a source cell edge in frame(s) '+edgeWarnings.join(', ')+'. Inspect for clipping.':'');
  }finally{bmp.close();}
 }
