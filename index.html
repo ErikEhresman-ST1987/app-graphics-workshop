@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#17202b">
 <title>Sprite Factory</title>
-<link rel="stylesheet" href="style.css?v=20261011c">
+<link rel="stylesheet" href="style.css?v=20261011e">
 </head>
 <body>
 <main>
@@ -31,12 +31,12 @@
 <section class="panel" aria-labelledby="result-title">
 <h2 id="result-title"><span class="step">3</span> Export graphic</h2>
 <div class="actions"><button id="process" disabled>Create WebP</button><a id="download" hidden>Download WebP</a></div>
-<p id="status" role="status">Choose an image to begin.</p>
+<div id="animationPanel" class="animation-panel" hidden><h3>Animation preview</h3><div class="animation-stage"><canvas id="animationCanvas" width="256" height="256" aria-label="Animated sprite frame preview"></canvas></div><div class="animation-controls"><button id="animationToggle" type="button">Play</button><label for="animationFps">Speed <output id="animationFpsValue">4</output> frames/sec</label><input id="animationFps" type="range" min="1" max="12" step="1" value="4"></div><p id="animationNote" class="muted small">Preview uses the processed sprite sheet. Export remains a single WebP file.</p></div><p id="status" role="status">Choose an image to begin.</p>
 <div class="preview" aria-label="Sprite preview on a transparency checkerboard"><canvas id="preview"></canvas></div>
 <p class="muted small">Checkerboard areas are transparent in Sprite and Sprite Sheet modes. Background mode fills the canvas. WebP output is verified before download. An internet connection is required on browsers that need the WebP encoder.</p>
 </section>
-<footer class="muted small">Sprite Factory · Increment 10B processing test</footer>
+<footer class="muted small">Sprite Factory · Increment 10C animation preview test</footer>
 </main>
-<script src="app.js?v=20261011d"></script>
+<script src="app.js?v=20261011e"></script>
 </body>
 </html>
