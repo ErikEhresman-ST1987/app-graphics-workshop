@@ -72,7 +72,7 @@ If extraction refuses export, check the reported count, source diagnostic, and f
 | 11F | Shared source-based horizontal positioning | Remaining slight horizontal motion judged smooth and acceptable |
 | Regression | Original chicken with original Equal-width settings | User confirmed animation remains perfect |
 
-**Acceptance:** User approved Increment 11 for production after testing cow extraction and the original chicken regression. Changes were merged into `main` via [pull request #2](https://github.com/ErikEhresman-ST1987/app-graphics-workshop/pull/2). The slight cow side-to-side motion is a **known accepted limitation**, not a claim of perfectly fixed foot anchoring.
+**Acceptance:** User approved Increment 11 for production after testing cow extraction and the original chicken regression. Changes were merged into `main` via [pull request #2](https://github.com/ErikEhresman-ST1987/sprite-factory/pull/2). The slight cow side-to-side motion is a **known accepted limitation**, not a claim of perfectly fixed foot anchoring.
 
 ## Architecture and development handoff
 
