@@ -9,3 +9,5 @@
 #sheetDiagnostics{margin:12px 0 18px}#diagnosticText{margin:8px 0}.diagnostic-view{overflow:auto;border-radius:10px;background:#fff;padding:6px}.diagnostic-view canvas{width:100%;height:auto;display:block}#diagnoseSheet{background:#a9c9e4;color:#132334}
 
 #sheetExtraction{max-width:100%}
+
+#componentDiagnostics{margin:12px 0 18px}#componentText{margin:8px 0}#detectCharacters{background:#a9c9e4;color:#132334}
